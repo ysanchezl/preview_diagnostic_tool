@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -8,6 +9,8 @@ from app.schemas.enrichment import WebsiteEnrichmentRequest, WebsiteEnrichmentRe
 from app.services.scraper import ScrapingError, fetch_site_text
 
 ENRICH_TOTAL_TIMEOUT = 25.0
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -58,6 +61,7 @@ async def enrich_from_website(
     except ScrapingError as exc:
         return _failed_response(source_url, exc.reason)
     except Exception:
+        logger.exception("Website enrichment failed unexpectedly for %s", source_url)
         return _failed_response(source_url, "unexpected_error")
 
     return WebsiteEnrichmentResponse(

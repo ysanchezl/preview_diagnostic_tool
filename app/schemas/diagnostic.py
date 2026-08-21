@@ -108,3 +108,10 @@ class DiagnosticResponse(BaseModel):
     contact_cta: str
     disclaimer: str
     provider: str = "unknown"
+
+
+class ProposalGenerationError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    proposal_ok: Literal[False] = False
+    error_reason: str

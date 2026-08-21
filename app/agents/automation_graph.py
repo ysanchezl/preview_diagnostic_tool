@@ -1,20 +1,34 @@
+import logging
 from typing import TypedDict
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.tools import build_default_flow, fallback_response, get_business_profile
 from app.llm.client import get_chat_model
 from app.prompts.business_profiles import BusinessProfile
 from app.prompts.system import BASE_SYSTEM_PROMPT, build_user_prompt
-from app.schemas.diagnostic import DiagnosticRequest, DiagnosticResponse, FlowStep
+from app.schemas.diagnostic import (
+    DiagnosticRequest,
+    DiagnosticResponse,
+    FlowStep,
+    ProposalGenerationError,
+)
+
+logger = logging.getLogger(__name__)
+
+# Groq's tool-calling protocol occasionally fails on this schema's size with a
+# request-level error (not a content problem, see CLAUDE.md gotcha) - detected by this
+# substring so we know a json_mode retry might actually help, as opposed to other
+# failures (rate limits, timeouts) where retrying immediately won't.
+_GROQ_TOOL_CALL_BUG_MARKER = "tool_use_failed"
 
 
 class DiagnosticState(TypedDict):
     payload: DiagnosticRequest
     business_profile: BusinessProfile | dict[str, object]
     default_flow: list[dict[str, object]]
-    proposal: DiagnosticResponse | None
+    proposal: DiagnosticResponse | ProposalGenerationError | None
     provider: str
 
 
@@ -27,6 +41,17 @@ async def enrich_context(state: DiagnosticState) -> DiagnosticState:
     return state
 
 
+async def _generate_proposal(
+    llm, messages: list[BaseMessage], method: str | None
+) -> DiagnosticResponse:
+    kwargs = {"method": method} if method is not None else {}
+    structured_llm = llm.with_structured_output(DiagnosticResponse, **kwargs)
+    response = await structured_llm.ainvoke(messages)
+    if isinstance(response, DiagnosticResponse):
+        return response
+    return DiagnosticResponse.model_validate(response)
+
+
 async def generate_with_llm(state: DiagnosticState) -> DiagnosticState:
     payload = state["payload"]
     llm = get_chat_model()
@@ -36,25 +61,37 @@ async def generate_with_llm(state: DiagnosticState) -> DiagnosticState:
         state["provider"] = "mock"
         return state
 
-    structured_llm = llm.with_structured_output(DiagnosticResponse, method="json_mode")
-    response = await structured_llm.ainvoke(
-        [
-            SystemMessage(content=BASE_SYSTEM_PROMPT),
-            HumanMessage(
-                content=(
-                    build_user_prompt(payload)
-                    + "\n\nContexto generado por tools internas:\n"
-                    + f"Perfil sectorial: {state['business_profile']}\n"
-                    + f"Flujo visual base: {state['default_flow']}\n"
-                )
-            ),
-        ]
-    )
+    messages: list[BaseMessage] = [
+        SystemMessage(content=BASE_SYSTEM_PROMPT),
+        HumanMessage(
+            content=(
+                build_user_prompt(payload)
+                + "\n\nContexto generado por tools internas:\n"
+                + f"Perfil sectorial: {state['business_profile']}\n"
+                + f"Flujo visual base: {state['default_flow']}\n"
+            )
+        ),
+    ]
 
-    if isinstance(response, DiagnosticResponse):
-        proposal = response
-    else:
-        proposal = DiagnosticResponse.model_validate(response)
+    try:
+        proposal = await _generate_proposal(llm, messages, method=None)
+    except Exception as exc:
+        if _GROQ_TOOL_CALL_BUG_MARKER not in str(exc):
+            logger.warning("LLM structured output failed (non-retryable)", exc_info=True)
+            state["proposal"] = ProposalGenerationError(error_reason="llm_failed")
+            state["provider"] = "error"
+            return state
+
+        logger.warning(
+            "Groq tool-call structured output failed, retrying with json_mode", exc_info=True
+        )
+        try:
+            proposal = await _generate_proposal(llm, messages, method="json_mode")
+        except Exception:
+            logger.warning("json_mode retry also failed to produce a valid proposal", exc_info=True)
+            state["proposal"] = ProposalGenerationError(error_reason="llm_failed")
+            state["provider"] = "error"
+            return state
 
     proposal.provider = "llm"
     if not proposal.flow:
@@ -77,7 +114,9 @@ def build_graph():
 automation_diagnostic_graph = build_graph()
 
 
-async def run_automation_diagnostic(payload: DiagnosticRequest) -> DiagnosticResponse:
+async def run_automation_diagnostic(
+    payload: DiagnosticRequest,
+) -> DiagnosticResponse | ProposalGenerationError:
     result = await automation_diagnostic_graph.ainvoke(
         {
             "payload": payload,

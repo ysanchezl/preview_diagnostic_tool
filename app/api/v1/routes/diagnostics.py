@@ -1,13 +1,20 @@
 from fastapi import APIRouter
 
 from app.agents.automation_graph import run_automation_diagnostic
-from app.schemas.diagnostic import BusinessType, DiagnosticRequest, DiagnosticResponse
+from app.schemas.diagnostic import (
+    BusinessType,
+    DiagnosticRequest,
+    DiagnosticResponse,
+    ProposalGenerationError,
+)
 
 router = APIRouter()
 
 
-@router.post("/proposal", response_model=DiagnosticResponse)
-async def create_proposal(payload: DiagnosticRequest) -> DiagnosticResponse:
+@router.post("/proposal", response_model=DiagnosticResponse | ProposalGenerationError)
+async def create_proposal(
+    payload: DiagnosticRequest,
+) -> DiagnosticResponse | ProposalGenerationError:
     return await run_automation_diagnostic(payload)
 
 

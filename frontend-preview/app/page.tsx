@@ -93,6 +93,17 @@ type DiagnosticResponse = {
   provider: string;
 };
 
+type ProposalGenerationError = {
+  proposal_ok: false;
+  error_reason: string;
+};
+
+function isProposalError(
+  data: DiagnosticResponse | ProposalGenerationError,
+): data is ProposalGenerationError {
+  return (data as ProposalGenerationError).proposal_ok === false;
+}
+
 type WebsiteEnrichmentResponse = {
   suggested_company_name: string | null;
   suggested_business_type: BusinessType | null;
@@ -350,7 +361,13 @@ export default function Home() {
         throw new Error(await extractErrorMessage(response, "No se pudo generar la propuesta."));
       }
 
-      const data = (await response.json()) as DiagnosticResponse;
+      const data = (await response.json()) as DiagnosticResponse | ProposalGenerationError;
+      if (isProposalError(data)) {
+        throw new Error(
+          "No pudimos generar tu propuesta con IA en este momento. Intentalo de nuevo en unos minutos.",
+        );
+      }
+
       setProposal(data);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Error inesperado.");
