@@ -121,7 +121,7 @@ NO anadas texto fuera del schema.
 
 VALORES PERMITIDOS:
 - business_type: law_firm, dental_clinic, notary, gestoria, real_estate, ecommerce,
-  professional_services, other
+  professional_services, change_management_consulting, other
 - dificultad: baja, media, alta
 - tipo: quick_win, medio_plazo, avanzado
 - step_type: start, input, process, automation, validation, communication, decision,

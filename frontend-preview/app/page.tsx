@@ -12,6 +12,7 @@ import {
   Ear,
   FileText,
   Gauge,
+  Globe,
   Loader2,
   MessagesSquare,
   Network,
@@ -31,11 +32,12 @@ type BusinessType =
   | "real_estate"
   | "ecommerce"
   | "professional_services"
+  | "change_management_consulting"
   | "other";
 
 type DiagnosticPayload = {
   company_name: string;
-  business_type: BusinessType;
+  business_type: BusinessType | "";
   employee_count: number;
   automation_goal: string;
   pain_points: string[];
@@ -91,6 +93,20 @@ type DiagnosticResponse = {
   provider: string;
 };
 
+type WebsiteEnrichmentResponse = {
+  suggested_company_name: string | null;
+  suggested_business_type: BusinessType | null;
+  suggested_current_tools: string[];
+  candidate_pain_points: string[];
+  candidate_objectives: string | null;
+  confidence: Record<string, "high" | "medium" | "low">;
+  source_url: string;
+  scraped_ok: boolean;
+  error_reason: string | null;
+};
+
+type SuggestedField = "company_name" | "business_type" | "current_tools" | "pain_points" | "automation_goal";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 const businessTypes: Array<{ value: BusinessType; label: string }> = [
@@ -101,6 +117,7 @@ const businessTypes: Array<{ value: BusinessType; label: string }> = [
   { value: "real_estate", label: "Inmobiliaria" },
   { value: "ecommerce", label: "Ecommerce" },
   { value: "professional_services", label: "Servicios profesionales" },
+  { value: "change_management_consulting", label: "Consultoria en gestion del cambio e innovacion" },
   { value: "other", label: "Otro negocio" },
 ];
 
@@ -117,133 +134,61 @@ const iconMap = {
   default: Sparkles,
 };
 
-const sampleProposal: DiagnosticResponse = {
-  company_name: "Clinica Sonrisa Norte",
-  business_type: "dental_clinic",
-  executive_summary:
-    "Clinica Sonrisa Norte puede iniciar con una automatizacion enfocada en agenda, recordatorios y seguimiento de pacientes para reducir carga administrativa.",
-  recommended_automation:
-    "Un flujo inicial conectaria la entrada de solicitudes, confirmacion de citas, avisos automaticos y seguimiento post-tratamiento con una medicion simple de resultados.",
-  automations: [
-    {
-      problema_detectado: "Recepcion saturada por llamadas y confirmaciones manuales",
-      solucion_propuesta: "Recordatorios automaticos de cita por email o WhatsApp",
-      beneficio_operativo: "Menos llamadas repetitivas y mayor orden en recepcion",
-      impacto_estimado: "Alto impacto inicial sin cambiar el sistema principal",
-      dificultad: "baja",
-      tipo: "quick_win",
-    },
-    {
-      problema_detectado: "Seguimiento irregular de presupuestos",
-      solucion_propuesta: "Secuencia de seguimiento para presupuestos pendientes",
-      beneficio_operativo: "Mejor continuidad comercial y menos oportunidades perdidas",
-      impacto_estimado: "Impacto visible en conversion y respuesta",
-      dificultad: "media",
-      tipo: "medio_plazo",
-    },
-    {
-      problema_detectado: "Falta de visibilidad sobre no-shows y carga operativa",
-      solucion_propuesta: "Panel operativo con citas, ausencias y tareas abiertas",
-      beneficio_operativo: "Mejor toma de decisiones semanal",
-      impacto_estimado: "Mejora progresiva del control interno",
-      dificultad: "media",
-      tipo: "medio_plazo",
-    },
-  ],
-  flow: [
-    {
-      id: "contact",
-      title: "Toma de contacto",
-      short_description: "Recogemos contexto, herramientas actuales y prioridades.",
-      step_type: "start",
-      owner: "team",
-      inputs: ["Diagnostico", "Canal preferido"],
-      outputs: ["Mapa inicial"],
-      suggested_icon: "messages-square",
-      estimated_impact: "Alineacion rapida del alcance.",
-    },
-    {
-      id: "analysis",
-      title: "Analisis operativo",
-      short_description: "Detectamos cuellos de botella y quick wins.",
-      step_type: "process",
-      owner: "automation",
-      inputs: ["Pain points", "Herramientas"],
-      outputs: ["Prioridades"],
-      suggested_icon: "workflow",
-      estimated_impact: "Foco en bajo riesgo y alto impacto.",
-    },
-    {
-      id: "automation",
-      title: "Automatizacion inicial",
-      short_description: "Activamos captura, avisos y seguimiento.",
-      step_type: "automation",
-      owner: "system",
-      inputs: ["Citas", "Solicitudes", "Eventos"],
-      outputs: ["Recordatorios", "Tareas", "Registro"],
-      suggested_icon: "bot",
-      estimated_impact: "Reduccion de trabajo manual.",
-    },
-    {
-      id: "validation",
-      title: "Validacion",
-      short_description: "Revisamos excepciones y aprobaciones del equipo.",
-      step_type: "validation",
-      owner: "team",
-      inputs: ["Flujo piloto"],
-      outputs: ["Ajustes"],
-      suggested_icon: "shield-check",
-      estimated_impact: "Adopcion mas sencilla.",
-    },
-    {
-      id: "roi",
-      title: "ROI y propuesta",
-      short_description: "Aterrizamos fases, beneficios y siguiente paso.",
-      step_type: "end",
-      owner: "team",
-      inputs: ["Flujo validado"],
-      outputs: ["Propuesta preliminar"],
-      suggested_icon: "chart-no-axes-combined",
-      estimated_impact: "Decision comercial mas clara.",
-    },
-  ],
-  roi: {
-    headline: "El retorno vendria de reducir tareas manuales y mejorar tiempos de respuesta.",
-    assumptions: [
-      "La estimacion final requiere conocer volumen mensual de citas y canales reales.",
-      "El alcance depende de integraciones disponibles y calidad de datos.",
-    ],
-    benefits: [
-      "Menos llamadas repetitivas.",
-      "Mejor seguimiento de pacientes.",
-      "Mas visibilidad para recepcion y direccion.",
-    ],
-  },
-  implementation_phases: [
-    "Diagnostico y diseno del flujo prioritario.",
-    "Prototipo con recordatorios, tareas y seguimiento.",
-    "Validacion, ajustes y medicion de beneficios.",
-  ],
-  contact_cta:
-    "Agenda una toma de contacto para ajustar alcance, integraciones, presupuesto y requisitos reales del negocio.",
-  disclaimer:
-    "Esta propuesta es preliminar y orientativa. La solucion final requiere analisis del negocio, herramientas disponibles e integraciones necesarias.",
-  provider: "mock",
+const initialPayload: DiagnosticPayload = {
+  company_name: "",
+  business_type: "",
+  employee_count: 0,
+  automation_goal: "",
+  pain_points: [],
+  current_tools: [],
+  preferred_contact: "not_specified",
 };
 
-const initialPayload: DiagnosticPayload = {
-  company_name: "Clinica Sonrisa Norte",
-  business_type: "dental_clinic",
-  employee_count: 12,
-  automation_goal: "Reducir llamadas y organizar citas, recordatorios y seguimientos.",
-  pain_points: [
-    "Mucho tiempo confirmando citas",
-    "Pacientes que no acuden",
-    "Informacion dispersa entre agenda email y WhatsApp",
-  ],
-  current_tools: ["Google Calendar", "WhatsApp", "Excel"],
-  preferred_contact: "email",
+const FIELD_LABELS: Record<string, string> = {
+  company_name: "Empresa",
+  business_type: "Negocio",
+  employee_count: "Empleados",
+  automation_goal: "Objetivo",
+  pain_points: "Pain points",
+  current_tools: "Herramientas actuales",
+  preferred_contact: "Contacto",
 };
+
+type ValidationError = {
+  loc?: Array<string | number>;
+  msg?: string;
+  type?: string;
+  ctx?: Record<string, unknown>;
+};
+
+function friendlyValidationMessage(errors: ValidationError[]): string {
+  return errors
+    .map((err) => {
+      const field = String(err.loc?.[err.loc.length - 1] ?? "");
+      const label = FIELD_LABELS[field] ?? field;
+      const maxLength = err.ctx?.max_length;
+      const minLength = err.ctx?.min_length;
+
+      if (err.type === "too_long") return `${label}: maximo ${maxLength} elementos.`;
+      if (err.type === "too_short") return `${label}: minimo ${minLength} elemento(s).`;
+      if (err.type === "string_too_long") return `${label}: maximo ${maxLength} caracteres.`;
+      if (err.type === "string_too_short") return `${label}: minimo ${minLength} caracteres.`;
+      return `${label}: ${err.msg ?? "valor invalido"}.`;
+    })
+    .join(" ");
+}
+
+async function extractErrorMessage(response: Response, fallback: string): Promise<string> {
+  const text = await response.text();
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed.detail === "string") return parsed.detail;
+    if (Array.isArray(parsed.detail)) return friendlyValidationMessage(parsed.detail);
+  } catch {
+    // Respuesta no era JSON: se usa el texto plano o el fallback.
+  }
+  return text || fallback;
+}
 
 function splitLines(value: string) {
   return value
@@ -261,9 +206,121 @@ export default function Home() {
   const [payload, setPayload] = useState<DiagnosticPayload>(initialPayload);
   const [painPointsText, setPainPointsText] = useState(initialPayload.pain_points.join("\n"));
   const [toolsText, setToolsText] = useState(initialPayload.current_tools.join("\n"));
-  const [proposal, setProposal] = useState<DiagnosticResponse>(sampleProposal);
+  const [employeeCountText, setEmployeeCountText] = useState("");
+  const [proposal, setProposal] = useState<DiagnosticResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [allowScraping, setAllowScraping] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichError, setEnrichError] = useState("");
+  const [suggestedFields, setSuggestedFields] = useState<Set<SuggestedField>>(new Set());
+  const [candidatePainPoints, setCandidatePainPoints] = useState<string[]>([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
+  const [candidateObjective, setCandidateObjective] = useState<string | null>(null);
+
+  function clearSuggestion(field: SuggestedField) {
+    setSuggestedFields((current) => {
+      if (!current.has(field)) return current;
+      const next = new Set(current);
+      next.delete(field);
+      return next;
+    });
+  }
+
+  function toggleCandidatePainPoint(point: string) {
+    setSelectedCandidates((current) => {
+      const next = new Set(current);
+      if (next.has(point)) next.delete(point);
+      else next.add(point);
+      return next;
+    });
+  }
+
+  function addSelectedCandidatePainPoints() {
+    const toAdd = candidatePainPoints.filter((point) => selectedCandidates.has(point));
+    if (toAdd.length > 0) {
+      setPainPointsText((current) => {
+        const existing = splitLines(current);
+        const merged = [...existing, ...toAdd.filter((point) => !existing.includes(point))];
+        return merged.join("\n");
+      });
+      setSuggestedFields((current) => new Set(current).add("pain_points"));
+    }
+    setCandidatePainPoints([]);
+    setSelectedCandidates(new Set());
+  }
+
+  function useCandidateObjective() {
+    if (!candidateObjective) return;
+    setPayload((current) => ({ ...current, automation_goal: candidateObjective }));
+    setSuggestedFields((current) => new Set(current).add("automation_goal"));
+    setCandidateObjective(null);
+  }
+
+  function dismissCandidates() {
+    setCandidatePainPoints([]);
+    setSelectedCandidates(new Set());
+    setCandidateObjective(null);
+  }
+
+  async function handleEnrichWebsite() {
+    if (!websiteUrl || !allowScraping) return;
+    setEnrichError("");
+    dismissCandidates();
+    setIsEnriching(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/diagnostics/enrich`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ website_url: websiteUrl, allow_scraping: allowScraping }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await extractErrorMessage(response, "No se pudo analizar la web."));
+      }
+
+      const data = (await response.json()) as WebsiteEnrichmentResponse;
+
+      if (!data.scraped_ok) {
+        const messages: Record<string, string> = {
+          timeout: "El analisis tardo demasiado, intenta de nuevo.",
+          robots_disallowed: "Este sitio no permite el analisis automatico (robots.txt).",
+        };
+        throw new Error(
+          messages[data.error_reason ?? ""] ?? "No se pudo analizar la web indicada.",
+        );
+      }
+
+      const newlySuggested = new Set<SuggestedField>();
+
+      if (data.suggested_company_name || data.suggested_business_type) {
+        setPayload((current) => ({
+          ...current,
+          ...(data.suggested_company_name ? { company_name: data.suggested_company_name } : {}),
+          ...(data.suggested_business_type ? { business_type: data.suggested_business_type } : {}),
+        }));
+        if (data.suggested_company_name) newlySuggested.add("company_name");
+        if (data.suggested_business_type) newlySuggested.add("business_type");
+      }
+
+      if (data.suggested_current_tools.length > 0) {
+        setToolsText(data.suggested_current_tools.join("\n"));
+        newlySuggested.add("current_tools");
+      }
+
+      setSuggestedFields(newlySuggested);
+      setCandidatePainPoints(data.candidate_pain_points);
+      setSelectedCandidates(new Set(data.candidate_pain_points));
+      setCandidateObjective(data.candidate_objectives);
+    } catch (caughtError) {
+      setEnrichError(caughtError instanceof Error ? caughtError.message : "Error inesperado.");
+    } finally {
+      setIsEnriching(false);
+    }
+  }
 
   const selectedBusiness = useMemo(
     () => businessTypes.find((item) => item.value === payload.business_type)?.label,
@@ -277,6 +334,7 @@ export default function Home() {
 
     const requestPayload = {
       ...payload,
+      employee_count: Number(employeeCountText),
       pain_points: splitLines(painPointsText),
       current_tools: splitLines(toolsText),
     };
@@ -289,8 +347,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "No se pudo generar la propuesta.");
+        throw new Error(await extractErrorMessage(response, "No se pudo generar la propuesta."));
       }
 
       const data = (await response.json()) as DiagnosticResponse;
@@ -315,22 +372,118 @@ export default function Home() {
               <h1>Diagnostico</h1>
             </div>
           </div>
-          <div className="status-pill">
-            <CheckCircle2 size={14} />
-            {proposal.provider}
-          </div>
+          {proposal ? (
+            <div className="status-pill">
+              <CheckCircle2 size={14} />
+              {proposal.provider}
+            </div>
+          ) : null}
         </div>
 
         <form className="form" onSubmit={handleSubmit}>
+          <div className="field enrichment-field">
+            <label htmlFor="website">Web del negocio (opcional)</label>
+            <div className="enrichment-row">
+              <input
+                id="website"
+                type="url"
+                placeholder="https://tuempresa.com"
+                value={websiteUrl}
+                onChange={(event) => setWebsiteUrl(event.target.value)}
+              />
+              <button
+                className="ghost-button"
+                type="button"
+                disabled={!websiteUrl || !allowScraping || isEnriching}
+                onClick={handleEnrichWebsite}
+              >
+                {isEnriching ? <Loader2 className="spin" size={16} /> : <Globe size={16} />}
+                Analizar mi web
+              </button>
+            </div>
+            {isEnriching ? (
+              <span className="suggested-hint">
+                Analizando la web, puede tardar hasta 25 segundos en sitios grandes...
+              </span>
+            ) : null}
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={allowScraping}
+                onChange={(event) => setAllowScraping(event.target.checked)}
+              />
+              Autorizo analizar mi web para precargar el diagnostico
+            </label>
+            {enrichError ? (
+              <div className="error">
+                <AlertCircle size={17} />
+                <span>{enrichError}</span>
+              </div>
+            ) : null}
+          </div>
+
+          {candidatePainPoints.length > 0 || candidateObjective ? (
+            <div className="field candidates-panel">
+              <div className="candidates-header">
+                <span className="suggested-hint">Sugerencias detectadas en la web</span>
+                <button type="button" className="ghost-button" onClick={dismissCandidates}>
+                  Descartar
+                </button>
+              </div>
+
+              {candidatePainPoints.length > 0 ? (
+                <div className="candidates-block">
+                  <label>Posibles pain points</label>
+                  {candidatePainPoints.map((point) => (
+                    <label key={point} className="candidate-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedCandidates.has(point)}
+                        onChange={() => toggleCandidatePainPoint(point)}
+                      />
+                      {point}
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={addSelectedCandidatePainPoints}
+                  >
+                    Anadir seleccionados a Pain points
+                  </button>
+                </div>
+              ) : null}
+
+              {candidateObjective ? (
+                <div className="candidates-block">
+                  <label>Objetivo sugerido</label>
+                  <p className="candidate-objective-text">{candidateObjective}</p>
+                  <button type="button" className="ghost-button" onClick={useCandidateObjective}>
+                    Usar esta sugerencia
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="field">
             <label htmlFor="company">Empresa</label>
             <input
               id="company"
+              name="organization"
+              autoComplete="organization"
+              required
+              className={suggestedFields.has("company_name") ? "suggested" : undefined}
+              placeholder="Nombre de la empresa"
               value={payload.company_name}
-              onChange={(event) =>
-                setPayload((current) => ({ ...current, company_name: event.target.value }))
-              }
+              onChange={(event) => {
+                clearSuggestion("company_name");
+                setPayload((current) => ({ ...current, company_name: event.target.value }));
+              }}
             />
+            {suggestedFields.has("company_name") ? (
+              <span className="suggested-hint">Sugerido, verifica o edita</span>
+            ) : null}
           </div>
 
           <div className="two-col">
@@ -338,36 +491,42 @@ export default function Home() {
               <label htmlFor="business">Negocio</label>
               <select
                 id="business"
+                required
+                className={suggestedFields.has("business_type") ? "suggested" : undefined}
                 value={payload.business_type}
-                onChange={(event) =>
+                onChange={(event) => {
+                  clearSuggestion("business_type");
                   setPayload((current) => ({
                     ...current,
                     business_type: event.target.value as BusinessType,
-                  }))
-                }
+                  }));
+                }}
               >
+                <option value="" disabled>
+                  Tipo de negocio o sector
+                </option>
                 {businessTypes.map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
                   </option>
                 ))}
               </select>
+              {suggestedFields.has("business_type") ? (
+                <span className="suggested-hint">Sugerido, verifica o edita</span>
+              ) : null}
             </div>
 
             <div className="field">
               <label htmlFor="employees">Empleados</label>
               <input
                 id="employees"
+                required
                 min={1}
                 max={5000}
                 type="number"
-                value={payload.employee_count}
-                onChange={(event) =>
-                  setPayload((current) => ({
-                    ...current,
-                    employee_count: Number(event.target.value),
-                  }))
-                }
+                placeholder="Ej. 12"
+                value={employeeCountText}
+                onChange={(event) => setEmployeeCountText(event.target.value)}
               />
             </div>
           </div>
@@ -376,29 +535,56 @@ export default function Home() {
             <label htmlFor="goal">Objetivo</label>
             <textarea
               id="goal"
+              required
+              spellCheck={false}
+              className={suggestedFields.has("automation_goal") ? "suggested" : undefined}
+              placeholder="Ej. Reducir tareas manuales, mejorar el seguimiento de clientes y organizar mejor la comunicacion interna."
               value={payload.automation_goal}
-              onChange={(event) =>
-                setPayload((current) => ({ ...current, automation_goal: event.target.value }))
-              }
+              onChange={(event) => {
+                clearSuggestion("automation_goal");
+                setPayload((current) => ({ ...current, automation_goal: event.target.value }));
+              }}
             />
+            {suggestedFields.has("automation_goal") ? (
+              <span className="suggested-hint">Sugerido, verifica o edita</span>
+            ) : null}
           </div>
 
           <div className="field">
             <label htmlFor="pain">Pain points</label>
             <textarea
               id="pain"
+              required
+              spellCheck={false}
+              className={suggestedFields.has("pain_points") ? "suggested" : undefined}
+              placeholder={"Un pain point por linea. Ej.\nMucho tiempo confirmando citas\nInformacion dispersa entre herramientas"}
               value={painPointsText}
-              onChange={(event) => setPainPointsText(event.target.value)}
+              onChange={(event) => {
+                clearSuggestion("pain_points");
+                setPainPointsText(event.target.value);
+              }}
             />
+            {suggestedFields.has("pain_points") ? (
+              <span className="suggested-hint">Sugerido, verifica o edita</span>
+            ) : null}
           </div>
 
           <div className="field">
             <label htmlFor="tools">Herramientas actuales</label>
             <textarea
               id="tools"
+              spellCheck={false}
+              className={suggestedFields.has("current_tools") ? "suggested" : undefined}
+              placeholder={"Una herramienta por linea. Ej.\nGoogle Calendar\nWhatsApp"}
               value={toolsText}
-              onChange={(event) => setToolsText(event.target.value)}
+              onChange={(event) => {
+                clearSuggestion("current_tools");
+                setToolsText(event.target.value);
+              }}
             />
+            {suggestedFields.has("current_tools") ? (
+              <span className="suggested-hint">Sugerido, verifica o edita</span>
+            ) : null}
           </div>
 
           <div className="field">
@@ -439,8 +625,14 @@ export default function Home() {
                 setPayload(initialPayload);
                 setPainPointsText(initialPayload.pain_points.join("\n"));
                 setToolsText(initialPayload.current_tools.join("\n"));
-                setProposal(sampleProposal);
+                setEmployeeCountText("");
+                setProposal(null);
                 setError("");
+                setWebsiteUrl("");
+                setAllowScraping(false);
+                setEnrichError("");
+                setSuggestedFields(new Set());
+                dismissCandidates();
               }}
             >
               <RefreshCw size={16} />

@@ -181,9 +181,105 @@ h3 {
   box-shadow: 0 0 0 3px rgb(15 118 110 / 12%);
 }
 
+.enrichment-field {
+  padding: 12px;
+  background: var(--panel-soft);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.enrichment-row {
+  display: flex;
+  gap: 8px;
+}
+
+.enrichment-row input {
+  flex: 1;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.checkbox-row input {
+  width: auto;
+  min-height: auto;
+}
+
+.field input.suggested,
+.field select.suggested,
+.field textarea.suggested {
+  border-color: var(--accent);
+  background: rgb(245 158 11 / 8%);
+}
+
+.suggested-hint {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.candidates-panel {
+  padding: 12px;
+  background: rgb(37 99 235 / 5%);
+  border: 1px dashed var(--brand-2);
+  border-radius: 8px;
+}
+
+.candidates-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.candidates-header .ghost-button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.candidates-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.candidates-block > label:first-child {
+  color: #31413a;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.candidate-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.candidate-item input {
+  width: auto;
+  min-height: auto;
+  margin-top: 3px;
+}
+
+.candidate-objective-text {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: 12px;
 }
 

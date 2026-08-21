@@ -1,8 +1,13 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -23,6 +28,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_v1_router, prefix="/api/v1")
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:

@@ -12,6 +12,7 @@ class BusinessType(StrEnum):
     REAL_ESTATE = "real_estate"
     ECOMMERCE = "ecommerce"
     PROFESSIONAL_SERVICES = "professional_services"
+    CHANGE_MANAGEMENT_CONSULTING = "change_management_consulting"
     OTHER = "other"
 
     @property
@@ -24,6 +25,7 @@ class BusinessType(StrEnum):
             self.REAL_ESTATE: "Inmobiliaria",
             self.ECOMMERCE: "Ecommerce",
             self.PROFESSIONAL_SERVICES: "Servicios profesionales",
+            self.CHANGE_MANAGEMENT_CONSULTING: "Consultoria en gestion del cambio e innovacion",
             self.OTHER: "Otro negocio",
         }[self]
 
@@ -33,7 +35,7 @@ class DiagnosticRequest(BaseModel):
     business_type: BusinessType
     employee_count: int = Field(ge=1, le=5000)
     automation_goal: str = Field(min_length=15, max_length=800)
-    pain_points: list[str] = Field(min_length=1, max_length=5)
+    pain_points: list[str] = Field(min_length=1, max_length=10)
     current_tools: list[str] = Field(default_factory=list, max_length=8)
     preferred_contact: Literal["email", "phone", "whatsapp", "not_specified"] = "not_specified"
 
