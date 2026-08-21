@@ -3,12 +3,11 @@ from typing import TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.tools import build_default_flow, fallback_response
+from app.agents.tools import build_default_flow, fallback_response, get_business_profile
 from app.llm.client import get_chat_model
 from app.prompts.business_profiles import BusinessProfile
 from app.prompts.system import BASE_SYSTEM_PROMPT, build_user_prompt
 from app.schemas.diagnostic import DiagnosticRequest, DiagnosticResponse, FlowStep
-from app.services.business_profile_service import get_business_profile_with_retrieval
 
 
 class DiagnosticState(TypedDict):
@@ -21,7 +20,7 @@ class DiagnosticState(TypedDict):
 
 async def enrich_context(state: DiagnosticState) -> DiagnosticState:
     payload = state["payload"]
-    state["business_profile"] = await get_business_profile_with_retrieval(payload.business_type)
+    state["business_profile"] = get_business_profile.invoke(payload.business_type.value)
     state["default_flow"] = build_default_flow.invoke(
         {"company_name": payload.company_name, "business_type": payload.business_type.value}
     )

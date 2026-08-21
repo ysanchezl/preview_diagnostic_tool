@@ -11,6 +11,11 @@ lead-gen / sales-preview tool, not a full product: every proposal is explicitly 
 ends in a call to contact the team. It also has an optional website-enrichment feature: given a business's
 URL, it scrapes the public site and uses the LLM to pre-fill parts of the diagnostic form.
 
+Business-sector guidance (`BUSINESS_PROFILES`) is a static, hand-written dict — there is no database or
+retrieval layer in this repo. A Postgres/pgvector-backed semantic retrieval version was prototyped and
+fully removed as unnecessary complexity for the current scope; see
+`docs/future-evolution/business-profile-rag.md` if that direction is revisited later.
+
 ## Commands
 
 Backend (run from repo root; requires Python >=3.11, since `app/schemas/diagnostic.py` uses
@@ -43,14 +48,6 @@ Config: copy `.env.example` to `.env` in the repo root. With `LLM_PROVIDER=mock`
 configured provider), the backend falls back to a deterministic, non-LLM proposal — useful for frontend
 development and tests without any API key.
 
-**Optional — Postgres/pgvector** (only needed if you're working on business-profile persistence/retrieval,
-see below; everything else works without it):
-
-```bash
-docker compose up -d                       # starts Postgres with the pgvector extension
-python scripts/seed_business_profiles.py   # loads BUSINESS_PROFILES into it (embeddings need OPENAI_API_KEY)
-```
-
 ## Known gotchas (learned the hard way — read before debugging)
 
 - **Groq model names change.** If a request fails with `groq.NotFoundError: model_not_found`, the
@@ -79,13 +76,13 @@ python scripts/seed_business_profiles.py   # loads BUSINESS_PROFILES into it (em
 **Request flow:** `frontend-preview` POSTs a `DiagnosticRequest` to
 `POST /api/v1/diagnostics/proposal` → `app/api/v1/routes/diagnostics.py` →
 `run_automation_diagnostic()` in `app/agents/automation_graph.py` → returns a `DiagnosticResponse`.
+The same router also exposes `GET /api/v1/diagnostics/business-types`, a trivial listing of
+`BusinessType` enum values/labels used to populate the frontend's business-type dropdown.
 
 **LangGraph pipeline** (`app/agents/automation_graph.py`), a 2-node `StateGraph`:
-1. `enrich_context` — calls `get_business_profile_with_retrieval()` (`app/services/business_profile_service.py`)
-   and the `build_default_flow` LangChain tool (`app/agents/tools.py`) to fetch sector-specific guidance and
-   a default 5-step visual workflow. `get_business_profile_with_retrieval` tries Postgres first and falls
-   back to the static `BUSINESS_PROFILES` dict on *any* DB error (unreachable DB, table not migrated, etc.)
-   — Postgres is fully optional infrastructure, never a hard dependency of this pipeline.
+1. `enrich_context` — calls the `get_business_profile` and `build_default_flow` LangChain tools
+   (`app/agents/tools.py`) to fetch sector-specific guidance (a static lookup into the `BUSINESS_PROFILES`
+   dict, see below) and a default 5-step visual workflow.
 2. `generate_with_llm` — resolves a chat model via `app/llm/client.py`; if none is configured
    (`get_chat_model()` returns `None`), short-circuits to `fallback_response()` (deterministic mock). If a
    model exists, calls `llm.with_structured_output(DiagnosticResponse, method="json_mode")` (see gotcha
@@ -115,17 +112,6 @@ python scripts/seed_business_profiles.py   # loads BUSINESS_PROFILES into it (em
   fields when the user explicitly accepts them (checkbox + "Añadir seleccionados" / "Usar esta sugerencia").
   Don't change this to silent auto-fill without checking with the user first — it was a deliberate decision.
 
-**Business profile persistence (optional, WIP)** — `app/db/` (SQLAlchemy async engine/session, a
-`BusinessProfileRecord` model with a `pgvector` embedding column), `app/db/repository.py` (exact lookup by
-`business_type` today; `search_similar_profiles` for future cosine-similarity search), and
-`scripts/seed_business_profiles.py` (loads `BUSINESS_PROFILES` into Postgres, optionally embedding each
-profile's markdown via `OpenAIEmbeddings` if `OPENAI_API_KEY` is set — seeds fine without it, just without
-embeddings). `docker-compose.yml` runs a local `pgvector/pgvector:pg16` container. **The embeddings
-provider is not finalized** — using OpenAI's paid embeddings API right now, but there's a self-hosted
-alternative (`BAAI/bge-m3` via `sentence-transformers`, 1024-dim vectors, in the separate
-`embedding_service` repo) that hasn't been wired in yet. If you swap providers, update `EMBEDDING_DIM` in
-`app/db/models.py` (currently 1536, matching OpenAI's `text-embedding-3-small`).
-
 **LLM provider selection** (`app/llm/client.py` + `app/core/config.py`): `LLM_PROVIDER` env var picks
 between `groq` (`langchain_groq.ChatGroq`), `openai`, `azure_openai`, or falls through to `None` (mock) if
 the provider is unset/unrecognized or its API key is missing. There is no explicit `"mock"` branch — mock
@@ -139,9 +125,8 @@ consulting, generic "other"), each with `identity`, `common_pain_points`, `autom
 LLM system-prompt context (`format_business_profile`) and the deterministic fallback proposal
 (`fallback_response` in `app/agents/tools.py`) — the two paths intentionally read from the same profile so
 mock and LLM output stay thematically consistent. Adding a new business vertical means: add an enum value +
-label in `BusinessType`, add a matching entry in `BUSINESS_PROFILES`, add it to the frontend's
-`businessTypes` array in `frontend-preview/app/page.tsx`, and (if you want it queryable from Postgres)
-re-run `scripts/seed_business_profiles.py`.
+label in `BusinessType`, add a matching entry in `BUSINESS_PROFILES`, and add it to the frontend's
+`businessTypes` array in `frontend-preview/app/page.tsx`.
 
 **Schema contract** (`app/schemas/diagnostic.py`): `DiagnosticResponse` and its nested models
 (`FlowStep`, `AutomationOpportunity`, `RoiEstimate`) use `model_config = ConfigDict(extra="forbid")` and are

@@ -21,12 +21,6 @@ class Settings(BaseSettings):
     azure_openai_deployment: str = ""
     azure_openai_api_version: str = "2024-12-01-preview"
 
-    database_url: str = (
-        "postgresql+asyncpg://preview_diagnostic:preview_diagnostic@localhost:5432/"
-        "preview_diagnostic"
-    )
-    embedding_model: str = "text-embedding-3-small"
-
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @cached_property
