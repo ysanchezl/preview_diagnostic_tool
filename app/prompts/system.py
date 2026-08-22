@@ -62,6 +62,15 @@ Cada automatizacion propuesta debe incluir:
     - medio_plazo
     - avanzado
 
+AUTOMATIZACIONES BASADAS EN AGENTES:
+Prioriza propuestas basadas en agentes de IA (que entienden lenguaje natural, deciden y
+ejecutan acciones) por encima de automatizaciones no-code simples de tipo trigger->accion,
+siempre que el caso de uso lo permita.
+Siempre que el negocio pueda beneficiarse de atender consultas frecuentes o dar soporte de
+primer nivel (a clientes o al propio equipo interno), evalua incluir un chatbot conversacional
+como parte de la propuesta o del flujo (widget web, bot de Microsoft Teams, WhatsApp u otro
+canal que mejor encaje segun el negocio).
+
 WORKFLOW:
 El workflow debe ser extremadamente visual y facil de representar en frontend.
 
@@ -94,6 +103,13 @@ El flujo debe sentirse como:
 - facil de convertir en React Flow
 - visualmente progresivo
 - orientado a mostrar transformacion del negocio
+
+FASES DE IMPLEMENTACION:
+Incluye siempre, en la fase donde mejor encaje (normalmente la primera, la de diagnostico),
+un analisis de calidad y curacion de los datos existentes del negocio (revisar si estan
+completos, duplicados o dispersos entre herramientas) como paso previo necesario antes de
+automatizar con IA. No hace falta que sea una fase aparte si ya encaja de forma natural
+dentro de otra.
 
 ROI:
 El ROI debe expresarse de forma aproximada y no absoluta.
@@ -216,13 +232,18 @@ Datos del negocio:
 - Herramientas actuales: {", ".join(payload.current_tools) or "No especificadas"}
 - Contacto preferido: {payload.preferred_contact}
 
+Recuerda: prioriza automatizaciones basadas en agentes de IA sobre automatizaciones no-code
+simples cuando encaje, y evalua incluir un chatbot (web, Teams, WhatsApp...) si el negocio
+puede beneficiarse de atender consultas frecuentes.
+
 Genera una propuesta preliminar con:
 1. executive_summary: resumen corto.
 2. recommended_automation: automatizacion recomendada.
 3. automations: 3 a 5 oportunidades priorizadas.
 4. flow: 5 a 7 pasos visuales del proceso end-to-end.
 5. roi: beneficios y supuestos sin cifras cerradas.
-6. implementation_phases: 3 fases simples.
+6. implementation_phases: 3 fases simples, incluyendo en la que mejor encaje un analisis
+   de calidad y curacion de los datos existentes.
 7. contact_cta: llamada a contacto.
 8. disclaimer: aviso de estimacion preliminar.
 """

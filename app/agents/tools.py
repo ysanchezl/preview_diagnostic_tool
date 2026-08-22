@@ -164,7 +164,8 @@ def fallback_response(payload: DiagnosticRequest) -> DiagnosticResponse:
             ],
         ),
         implementation_phases=[
-            "Diagnostico y definicion del flujo prioritario.",
+            "Diagnostico, analisis de calidad y curacion de los datos existentes, y "
+            "definicion del flujo prioritario.",
             "Prototipo con automatizaciones esenciales e integraciones minimas.",
             "Validacion con el equipo, ajustes y medicion de beneficios.",
         ],

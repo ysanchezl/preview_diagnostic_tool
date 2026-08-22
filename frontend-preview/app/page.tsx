@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   BarChart3,
   Bot,
@@ -22,7 +23,7 @@ import {
   Sparkles,
   Workflow,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type BusinessType =
   | "law_firm"
@@ -119,6 +120,14 @@ type WebsiteEnrichmentResponse = {
 type SuggestedField = "company_name" | "business_type" | "current_tools" | "pain_points" | "automation_goal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+
+const GENERATING_MESSAGES = [
+  "Analizando tu diagnostico...",
+  "Detectando oportunidades de automatizacion...",
+  "Disenando el flujo visual...",
+  "Estimando el retorno esperado...",
+  "Afinando los ultimos detalles...",
+];
 
 const businessTypes: Array<{ value: BusinessType; label: string }> = [
   { value: "law_firm", label: "Bufete de abogados" },
@@ -221,11 +230,38 @@ export default function Home() {
   const [proposal, setProposal] = useState<DiagnosticResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [generatingStep, setGeneratingStep] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setGeneratingStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setGeneratingStep((step) => (step + 1) % GENERATING_MESSAGES.length);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [allowScraping, setAllowScraping] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichError, setEnrichError] = useState("");
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const confirmResetResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
+
+  function askConfirmReset(): Promise<boolean> {
+    setConfirmResetOpen(true);
+    return new Promise((resolve) => {
+      confirmResetResolverRef.current = resolve;
+    });
+  }
+
+  function resolveConfirmReset(confirmed: boolean) {
+    setConfirmResetOpen(false);
+    confirmResetResolverRef.current?.(confirmed);
+    confirmResetResolverRef.current = null;
+  }
   const [suggestedFields, setSuggestedFields] = useState<Set<SuggestedField>>(new Set());
   const [candidatePainPoints, setCandidatePainPoints] = useState<string[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
@@ -278,6 +314,26 @@ export default function Home() {
 
   async function handleEnrichWebsite() {
     if (!websiteUrl || !allowScraping) return;
+
+    const hasExistingData = Boolean(
+      payload.company_name ||
+        payload.business_type ||
+        payload.automation_goal ||
+        painPointsText.trim() ||
+        toolsText.trim(),
+    );
+
+    if (hasExistingData) {
+      const confirmed = await askConfirmReset();
+      if (!confirmed) return;
+    }
+
+    setPayload((current) => ({ ...current, company_name: "", business_type: "", automation_goal: "" }));
+    setPainPointsText("");
+    setToolsText("");
+    setSuggestedFields(new Set());
+    setProposal(null);
+    setError("");
     setEnrichError("");
     dismissCandidates();
     setIsEnriching(true);
@@ -378,6 +434,47 @@ export default function Home() {
 
   return (
     <main className="shell">
+      {confirmResetOpen ? (
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={() => resolveConfirmReset(false)}
+        >
+          <div
+            className="modal-card"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="confirm-reset-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-icon">
+              <AlertTriangle size={22} />
+            </div>
+            <h3 id="confirm-reset-title">Vas a analizar una nueva web</h3>
+            <p>
+              Esto borrara los datos actuales del formulario (empresa, tipo de negocio, objetivo,
+              pain points y herramientas) para precargarlo con la nueva web.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => resolveConfirmReset(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => resolveConfirmReset(true)}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="panel diagnostic-panel" aria-label="Diagnostico">
         <div className="panel-head">
           <div className="brand-lockup">
@@ -789,6 +886,19 @@ export default function Home() {
             <h2>Siguiente paso</h2>
             <p>{proposal.contact_cta}</p>
             <p>{proposal.disclaimer}</p>
+          </div>
+        </section>
+      ) : isLoading ? (
+        <section className="panel generating">
+          <div className="generating-inner">
+            <div className="generating-icon">
+              <Sparkles size={28} />
+            </div>
+            <h2>Generando tu propuesta</h2>
+            <p className="generating-message">{GENERATING_MESSAGES[generatingStep]}</p>
+            <div className="progress-track">
+              <div className="progress-bar" />
+            </div>
           </div>
         </section>
       ) : (

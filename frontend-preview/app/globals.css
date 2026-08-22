@@ -319,6 +319,14 @@ h3 {
   border-color: var(--line);
 }
 
+.ghost-button:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  background: var(--panel-soft);
+  border-color: var(--line);
+  opacity: 0.65;
+}
+
 .error {
   display: flex;
   gap: 8px;
@@ -559,6 +567,104 @@ h3 {
   animation: spin 0.9s linear infinite;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(23 32 28 / 55%);
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+  text-align: left;
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.modal-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--accent);
+  background: rgb(245 158 11 / 14%);
+  border-radius: 50%;
+}
+
+.modal-card h3 {
+  margin: 0;
+}
+
+.modal-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.generating {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 44px);
+  padding: 30px;
+  text-align: center;
+}
+
+.generating-inner {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.generating-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  animation: generatingPulse 1.8s ease-in-out infinite;
+}
+
+.generating-message {
+  min-height: 20px;
+  color: var(--muted);
+  animation: messageFade 3.2s ease-in-out infinite;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.progress-bar {
+  width: 40%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand-2), #60a5fa);
+  animation: progressSlide 1.4s ease-in-out infinite;
+}
+
 @keyframes flowPulse {
   to {
     background-position: 220% 0;
@@ -568,6 +674,44 @@ h3 {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes generatingPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(37 99 235 / 35%);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgb(37 99 235 / 0%);
+  }
+}
+
+@keyframes progressSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(150%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+@keyframes messageFade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 0;
+  }
+  95% {
+    opacity: 0;
   }
 }
 
