@@ -12,7 +12,6 @@ import {
   ClipboardList,
   Ear,
   FileText,
-  Gauge,
   Globe,
   Loader2,
   MessagesSquare,
@@ -478,13 +477,8 @@ export default function Home() {
       <section className="panel diagnostic-panel" aria-label="Diagnostico">
         <div className="panel-head">
           <div className="brand-lockup">
-            <div className="mark">
-              <Gauge size={18} />
-            </div>
-            <div>
-              <div className="eyebrow">Automation Preview</div>
-              <h1>Diagnostico</h1>
-            </div>
+            <img src="/logo-full.png" alt="Growthus AI" className="brand-logo" />
+            <h1 className="brand-title">Autodiagnostico</h1>
           </div>
           {proposal ? (
             <div className="status-pill">

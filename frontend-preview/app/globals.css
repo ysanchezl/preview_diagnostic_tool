@@ -77,28 +77,19 @@ button {
 
 .brand-lockup {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 12px;
   min-width: 0;
 }
 
-.mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  border-radius: 8px;
-  flex: 0 0 auto;
+.brand-logo {
+  height: 56px;
+  width: auto;
 }
 
-.eyebrow {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
+.brand-title {
+  margin-bottom: 8px;
 }
 
 h1,
