@@ -78,7 +78,7 @@ button {
 .brand-lockup {
   display: flex;
   flex-direction: row;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   min-width: 0;
 }
@@ -86,10 +86,6 @@ button {
 .brand-logo {
   height: 56px;
   width: auto;
-}
-
-.brand-title {
-  margin-bottom: 8px;
 }
 
 h1,
